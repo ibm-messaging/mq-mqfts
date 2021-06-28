@@ -49,9 +49,9 @@ Utility also provides a number of options, for example: Display
 ### How to build the utility
 The source code for the utility has been provided. The source is in golang and requires few third party golang libraries from GitHub. The utility has been compiled with go1.14.6
 
-1) Install golang SDK 
-2) Clone the repository to any directory
-3) Change directory to `source`
-4) Ensure path go compiler is set in the environment. For example `export PATH=$PATH:/usr/go/bin` assuming go SDK is installed in `/usr/go` directory
-5) Run `go build`
+1) Install golang SDK.
+2) Clone the repository to any directory.
+3) Change directory to where source is located.
+4) Ensure path go compiler is set in the environment. For example `export PATH=$PATH:/usr/go/bin` assuming go SDK is installed in `/usr/go` directory.
+5) Run `go build`.
 
