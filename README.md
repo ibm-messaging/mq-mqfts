@@ -45,6 +45,17 @@ Utility also provides a number of options, for example: Display
   1) Only failed or partial transfers. 
   2) Full details of a single transfer or all transfers
   3) List of last 'N' failed or successful transfers
+
+Command examples
+```
+mqfts                   - Display list of TransferIDs and status
+mqfts --id=<transferid> - Display details of a single transfer
+mqfts --id=*            - Display details of all transfers
+mqfts --fl=5            - List last 5 failed transfers
+mqfts --ps=10           - List last 10 partially successful transfer
+mqfts --lf=/usr/cap0.log --id=* - Display details of all transfers from cap0.log file
+```
+ 
  
 ### How to build the utility
 The source code for the utility has been provided. The source is in golang and requires few third party golang libraries from GitHub. The utility has been compiled with go1.14.6
