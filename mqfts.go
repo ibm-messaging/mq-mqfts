@@ -32,6 +32,7 @@ import (
     "log"
     "os"
     "strings"
+    "time"
 )
 
 // Map to cache transfer ids already processed
@@ -352,7 +353,7 @@ func displayTransferDetails(xmlMessage string){
                 status := transaction.SelectElement("status")
                 if status != nil {
                     supplementMsg = status.SelectElement("supplement").InnerText()
-                    fmt.Printf("[%s] TransferID: %s Status: %s\n \tSupplement: %s\n",
+                    fmt.Printf("\n[%s] TransferID: %s Status: %s\n \tSupplement: %s\n",
                         action.SelectAttr("time"),
                         strings.ToUpper(transferId),
                         action.InnerText(),
@@ -384,24 +385,39 @@ func displayTransferDetails(xmlMessage string){
                         numFileWarnings = statistics.SelectElement("numFileWarnings").InnerText()
                     }
                 }
+                var elapsedTime time.Duration
+                if actualStartTimeText != "" {
+                    startTime := getFormattedTime(actualStartTimeText)
+                    completePublishTIme := getFormattedTime(action.SelectAttr("time"))
+                    elapsedTime = completePublishTIme.Sub(startTime)
+                }
 
-                fmt.Printf("\tDestination Agent: %s\n\tStart time: %s\n\tCompletion Time: %s\n\tRetry Count: %s\n\tFailures:%s\n\tWarnings:%s\n",
+                fmt.Printf("\tDestination Agent: %s\n\tStart time: %s\n\tCompletion Time: %s\n\tElapsed time: %s\n\tRetry Count: %s\n\tFailures:%s\n\tWarnings:%s\n",
                             destAgent.SelectAttr("agent"),
                             actualStartTimeText,
                             action.SelectAttr("time"),
+                            elapsedTime,
                             retryCount,
                             numFileFailures,
                             numFileWarnings)
                 } else if strings.EqualFold(action.InnerText(),"progress") {
                     // Process transfer progress Xml message
                     destAgent := transaction.SelectElement("destinationAgent")
-                    fmt.Printf("[%s] %s Status: %s Destination: %s \n", action.SelectAttr("time"),
+                    progressPublishTimeText := action.SelectAttr("time")
+                    fmt.Printf("\n[%s] %s Status: %s Destination: %s \n", progressPublishTimeText,
                         strings.ToUpper(transferId),
                         action.InnerText(),
                         destAgent.SelectAttr("agent"))
                     transferSet := transaction.SelectElement("transferSet")
-                    fmt.Printf("\tTotal items in transfer request: %s\n", transferSet.SelectAttr("total"))
-                    fmt.Printf("\tBytes sent: %s\n",transferSet.SelectAttr("bytesSent"))
+                    startTimeText := transferSet.SelectAttr("startTime")
+                    startTime := getFormattedTime(startTimeText)
+                    progressPublishTime := getFormattedTime(progressPublishTimeText)
+                    elapsedTime := progressPublishTime.Sub(startTime)
+                    fmt.Printf("\tStart time: %s\n\tElapsed time: %s\n\tTotal items in transfer request: %s\n\tBytes sent: %s\n",
+                        startTimeText,
+                        elapsedTime,
+                        transferSet.SelectAttr("total"),
+                        transferSet.SelectAttr("bytesSent"))
 
                     // Loop through all items in the progress message and display details.
                     items := transferSet.SelectElements("item")
@@ -409,6 +425,7 @@ func displayTransferDetails(xmlMessage string){
                         status := items[i].SelectElement("status")
                         resultCode := status.SelectAttr("resultCode")
                         var sourceName string
+                        var sourceSize = "-1"
                         queueSource := items[i].SelectElement("source/queue")
                         if queueSource != nil {
                             sourceName = queueSource.InnerText()
@@ -416,25 +433,28 @@ func displayTransferDetails(xmlMessage string){
                             fileName := items[i].SelectElement("source/file")
                             if fileName != nil {
                                 sourceName = fileName.InnerText()
+                                sourceSize = fileName.SelectAttr("size")
                             }
                         }
 
                         var destinationName string
                         queueDest := items[i].SelectElement("destination/queue")
+                        var destinationSize = "-1"
                         if queueDest != nil {
                             destinationName = queueDest.InnerText()
                         } else {
                             fileName := items[i].SelectElement("destination/file")
                             if fileName != nil {
                                 destinationName = fileName.InnerText()
+                                destinationSize = fileName.SelectAttr("size")
                             }
                         }
 
                         // Display details of each item
-                        fmt.Printf("\tItem # %d\n\t\tSource: %s\n\t\tDestination: %s\n",
+                        fmt.Printf("\tItem # %d\n\t\tSource: %s\tSize: %s bytes\n\t\tDestination: %s\tSize: %s bytes\n",
                             i+1,
-                            sourceName,
-                            destinationName)
+                            sourceName, sourceSize,
+                            destinationName, destinationSize)
                         // Process result code and append any supplement
                         if resultCode != "0" {
                             supplement := status.SelectElement("supplement")
@@ -459,6 +479,14 @@ func displayTransferDetails(xmlMessage string){
                 }
         }
     }
+}
+
+func getFormattedTime(timeValue string) time.Time {
+    t, err := time.Parse(time.RFC3339, timeValue)
+    if err != nil {
+        fmt.Printf("%s\n", err)
+    }
+    return t
 }
 
 /*
