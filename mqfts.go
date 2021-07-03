@@ -158,11 +158,14 @@ func getLogPath(logFilePath string) string {
     if isFlagPassed ("lf") {
         outputLogFilePath = logFilePath
     } else {
+        fmt.Println("Environment variables:")
         var bfgDataPath string
         agentNameEnv := os.Getenv("MFT_AGENT_NAME")
         if strings.Trim(agentNameEnv, "") == "" {
             fmt.Println("Failed to determine agent name from environment. Ensure 'MFT_AGENT_NAME' environment variable set to agent name")
             os.Exit(1)
+        } else {
+            fmt.Printf("\tMFT_AGENT_NAME=%s\n", agentNameEnv)
         }
 
         var coordinationQMgr string
@@ -170,13 +173,18 @@ func getLogPath(logFilePath string) string {
         if strings.Trim(coordinationQMgr, "") == "" {
             fmt.Println("Failed to determine coordination queue manager name. Set 'MFT_COORDINATION_QM' environment variable with coordination queue manager")
             os.Exit(1)
+        } else {
+            fmt.Printf("\tMFT_COORDINATION_QM=%s\n", coordinationQMgr)
         }
+
 
         // Get path from environment variable
         bfgConfigMountPath := os.Getenv("BFG_DATA")
         if strings.Trim(bfgConfigMountPath, "") == "" {
             fmt.Println("Failed to determine agent configuration directory name from environment. Ensure BFG_DATA environment variable set to IBM MQ Managed File Transfer data directory")
             os.Exit(1)
+        } else {
+            fmt.Printf("\tBFG_DATA=%s\n", bfgConfigMountPath)
         }
         if len(bfgConfigMountPath) > 0 {
             bfgDataPath = bfgConfigMountPath
@@ -361,20 +369,17 @@ func displayTransferDetails(xmlMessage string){
                 }
 
                 destAgent := transaction.SelectElement("destinationAgent")
-                var actualStartTimeText = ""
                 statistics := transaction.SelectElement("statistics")
+                // Retrieve statistics
+                var actualStartTimeText = ""
+                var retryCount string
+                var numFileFailures string
+                var numFileWarnings string
                 if statistics != nil {
                     actualStartTime := statistics.SelectElement("actualStartTime")
                     if actualStartTime != nil {
                         actualStartTimeText = actualStartTime.InnerText()
                     }
-                }
-
-                // Retrieve statistics
-                var retryCount string
-                var numFileFailures string
-                var numFileWarnings string
-                if statistics != nil {
                     if statistics.SelectElement("retryCount") != nil {
                         retryCount = statistics.SelectElement("retryCount").InnerText()
                     }
@@ -392,7 +397,7 @@ func displayTransferDetails(xmlMessage string){
                     elapsedTime = completePublishTIme.Sub(startTime)
                 }
 
-                fmt.Printf("\tDestination Agent: %s\n\tStart time: %s\n\tCompletion Time: %s\n\tElapsed time: %s\n\tRetry Count: %s\n\tFailures:%s\n\tWarnings:%s\n",
+                fmt.Printf("\tDestination Agent: %s\n\tStart time: %s\n\tCompletion Time: %s\n\tElapsed time: %s\n\tRetry Count: %s\n\tFailures:%s\n\tWarnings:%s\n\n",
                             destAgent.SelectAttr("agent"),
                             actualStartTimeText,
                             action.SelectAttr("time"),
@@ -410,12 +415,11 @@ func displayTransferDetails(xmlMessage string){
                         destAgent.SelectAttr("agent"))
                     transferSet := transaction.SelectElement("transferSet")
                     startTimeText := transferSet.SelectAttr("startTime")
-                    startTime := getFormattedTime(startTimeText)
-                    progressPublishTime := getFormattedTime(progressPublishTimeText)
-                    elapsedTime := progressPublishTime.Sub(startTime)
-                    fmt.Printf("\tStart time: %s\n\tElapsed time: %s\n\tTotal items in transfer request: %s\n\tBytes sent: %s\n",
+                    //startTime := getFormattedTime(startTimeText)
+                    //progressPublishTime := getFormattedTime(progressPublishTimeText)
+                    //elapsedTime := progressPublishTime.Sub(startTime)
+                    fmt.Printf("\tStart time: %s\n\tTotal items in transfer request: %s\n\tBytes sent: %s\n",
                         startTimeText,
-                        elapsedTime,
                         transferSet.SelectAttr("total"),
                         transferSet.SelectAttr("bytesSent"))
 
@@ -471,8 +475,15 @@ func displayTransferDetails(xmlMessage string){
                     // Process transfer started Xml message
                     destAgent := transaction.SelectElement("destinationAgent")
                     destinationAgentName := destAgent.SelectAttr("agent")
+                    transferSet := transaction.SelectElement("transferSet")
+                    startTime := ""
+                    if transferSet != nil {
+                        startTime = transferSet.SelectAttr("startTime")
+                    } else {
+                        startTime = action.SelectAttr("time")
+                    }
                     fmt.Printf("[%s] TransferID: %s Status: %s Destination: %s\n",
-                        action.SelectAttr("time"),
+                        startTime,
                         strings.ToUpper(transferId),
                         action.InnerText(),
                         destinationAgentName)
